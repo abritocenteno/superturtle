@@ -4,10 +4,21 @@
     "slug": "schildpad",
     "version": "0.1.0",
     "orientation": "default",
-    "platforms": ["android", "ios"],
+    "platforms": [
+      "android",
+      "ios"
+    ],
     "android": {
-      "package": "com.example.schildpad"
+      "package": "com.abritocenteno.schildpad"
     },
-    "assetBundlePatterns": ["**/*"]
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "owner": "abelbrito",
+    "extra": {
+      "eas": {
+        "projectId": "07cf3b0c-154f-40c8-98b6-a757f5ac8857"
+      }
+    }
   }
 }
