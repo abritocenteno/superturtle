@@ -1,0 +1,1280 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Schildpad — turtle graphics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --slate-900:#0E1622;
+    --slate-800:#151F2E;
+    --slate-700:#1E2B3D;
+    --line:#2A3A50;
+    --text:#E6EDF5;
+    --muted:#8CA0B8;
+    --paper:#FCFBF7;
+    --grid:#DCE3DE;
+    --green:#33A06B;
+    --amber:#E9A93C;
+    --rose:#D9527E;
+    --cyan:#38A8C9;
+    --violet:#8B6FD1;
+    --red:#E05252;
+    --display:'Bricolage Grotesque','Trebuchet MS',system-ui,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+    --pad:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--slate-900);color:var(--text);
+    font-family:var(--display);font-size:15px;
+    -webkit-font-smoothing:antialiased;
+  }
+  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+  :focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:3px}
+
+  .app{height:100%;display:flex;flex-direction:column}
+
+  /* ---------- top bar ---------- */
+  .bar{
+    display:flex;align-items:center;gap:14px;
+    padding:10px var(--pad);border-bottom:1px solid var(--line);
+    background:var(--slate-800);flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:baseline;gap:9px;margin-right:auto}
+  .brand h1{
+    margin:0;font-size:20px;font-weight:800;letter-spacing:-.02em;
+  }
+  .brand .sub{color:var(--muted);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+  .btn{
+    display:inline-flex;align-items:center;gap:7px;
+    padding:7px 13px;border-radius:7px;border:1px solid var(--line);
+    background:var(--slate-700);font-size:14px;transition:.15s border-color,.15s background;
+  }
+  .btn:hover{border-color:#3B506C}
+  .btn.primary{background:var(--green);border-color:var(--green);color:#06210F;font-weight:600}
+  .btn.primary:hover{background:#3CB579;border-color:#3CB579}
+  .btn[disabled]{opacity:.4;cursor:default}
+  .lang{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+  .lang button{padding:7px 11px;font-size:13px;color:var(--muted)}
+  .lang button[aria-pressed=true]{background:var(--slate-700);color:var(--text);font-weight:600}
+
+  /* ---------- split ---------- */
+  .split{flex:1;display:grid;grid-template-columns:minmax(340px,2fr) 3fr;min-height:0}
+  .pane{display:flex;flex-direction:column;min-height:0;min-width:0}
+  .pane + .pane{border-left:1px solid var(--line)}
+  .pane-head{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:9px var(--pad);color:var(--muted);
+    font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  }
+  .pane-head kbd{
+    font-family:var(--mono);font-size:10px;background:var(--slate-700);
+    border:1px solid var(--line);border-radius:4px;padding:2px 5px;text-transform:none;letter-spacing:0;
+  }
+
+  /* ---------- editor ---------- */
+  .code{
+    flex:1;min-height:0;display:flex;position:relative;
+    background:var(--slate-800);border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+    font-family:var(--mono);font-size:13.5px;line-height:1.62;
+  }
+  .gutter{
+    width:44px;flex:0 0 44px;overflow:hidden;position:relative;
+    background:var(--slate-800);border-right:1px solid var(--line);
+  }
+  .gutter-inner{padding:12px 8px 60px 0;text-align:right;color:#4E6280;white-space:pre;will-change:transform}
+  .gutter-inner .bad{color:var(--red);font-weight:700}
+  .code-body{flex:1;position:relative;min-width:0}
+  .hl,.ta{
+    position:absolute;inset:0;margin:0;padding:12px 14px 60px;
+    font:inherit;line-height:inherit;white-space:pre;overflow:hidden;
+    border:0;tab-size:2;
+  }
+  .hl{pointer-events:none;color:var(--text)}
+  .hl code{display:block;will-change:transform}
+  .ta{
+    background:transparent;color:transparent;caret-color:var(--amber);
+    resize:none;overflow:auto;
+  }
+  .ta::selection{background:rgba(233,169,60,.28)}
+  .ta::-webkit-scrollbar{width:9px;height:9px}
+  .ta::-webkit-scrollbar-thumb{background:#2E4058;border-radius:9px}
+
+  .t-cmd{color:#7FD9AE}
+  .t-ctl{color:var(--amber);font-weight:700}
+  .t-num{color:#F0A6C2}
+  .t-var{color:#8FCFEA}
+  .t-str{color:#C4B3F0}
+  .t-brk{color:#8CA0B8}
+  .t-com{color:#5C7392;font-style:italic}
+
+  /* ---------- console ---------- */
+  .console{
+    padding:9px var(--pad);min-height:44px;max-height:120px;overflow:auto;
+    font-family:var(--mono);font-size:12.5px;line-height:1.55;color:var(--muted);
+    background:var(--slate-900);
+  }
+  .console .err{color:#FF9B9B}
+  .console .out{color:#BFE9D3}
+  .console .ok{color:var(--muted)}
+
+  /* ---------- chips ---------- */
+  .chips{
+    display:flex;flex-wrap:wrap;gap:5px;padding:10px var(--pad) 12px;
+    border-top:1px solid var(--line);max-height:118px;overflow:auto;
+  }
+  .chip{
+    font-family:var(--mono);font-size:11.5px;padding:4px 8px;border-radius:5px;
+    background:var(--slate-800);border:1px solid var(--line);color:#9FD8BC;
+  }
+  .chip:hover{background:var(--slate-700);color:#C7F0DC}
+  .chip small{color:#63798F;margin-left:6px;font-family:var(--display)}
+
+  /* ---------- paper ---------- */
+  .paper-pane{background:var(--slate-900);padding:0 var(--pad) var(--pad)}
+  .pens{display:flex;gap:6px;align-items:flex-end;height:38px;padding-left:2px}
+  .pen{
+    width:15px;height:26px;position:relative;border-radius:2px 2px 4px 4px;
+    transition:transform .18s cubic-bezier(.3,1.4,.5,1),filter .18s;
+    transform:translateY(-9px);filter:saturate(.55) brightness(.72);
+  }
+  .pen::after{
+    content:'';position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);
+    border-left:3px solid transparent;border-right:3px solid transparent;
+    border-top:7px solid currentColor;opacity:.9;
+  }
+  .pen[aria-pressed=true]{transform:translateY(0);filter:none}
+  .pen[aria-pressed=true]::before{
+    content:'';position:absolute;inset:-4px -3px;border-radius:5px;
+    border:1px solid currentColor;opacity:.45;
+  }
+  .sheet{
+    position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;
+  }
+  .sheet-inner{
+    position:relative;background:var(--paper);border-radius:3px;
+    box-shadow:0 18px 40px -14px rgba(0,0,0,.75),0 0 0 1px rgba(255,255,255,.06);
+    max-width:100%;max-height:100%;aspect-ratio:4/3;width:100%;
+  }
+  .sheet-inner canvas{position:absolute;inset:0;width:100%;height:100%;border-radius:3px}
+  .status{
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+    padding-top:10px;color:var(--muted);font-size:12px;font-family:var(--mono);
+  }
+  .status .grp{display:flex;align-items:center;gap:7px}
+  .status label{letter-spacing:.04em}
+  input[type=range]{width:104px;accent-color:var(--green)}
+  .toggle{
+    padding:3px 9px;border:1px solid var(--line);border-radius:6px;
+    font-family:var(--mono);font-size:11.5px;color:var(--muted);
+  }
+  .toggle[aria-pressed=true]{background:var(--slate-700);color:var(--text)}
+  select{
+    font:inherit;font-size:13px;background:var(--slate-700);color:var(--text);
+    border:1px solid var(--line);border-radius:7px;padding:7px 9px;
+  }
+
+  @media (max-width:860px){
+    .split{grid-template-columns:1fr;grid-template-rows:1fr 1fr;overflow:auto}
+    .pane + .pane{border-left:0;border-top:1px solid var(--line)}
+    .paper-pane{padding-top:8px}
+    .chips{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .pen{transition:none}
+  }
+</style>
+
+<div class="app">
+  <header class="bar">
+    <div class="brand">
+      <h1 id="ui-title">Schildpad</h1>
+      <span class="sub" id="ui-sub">turtle graphics</span>
+    </div>
+    <select id="examples" aria-label="Voorbeelden"></select>
+    <div class="lang" role="group" aria-label="Taal / language">
+      <button id="lang-nl" aria-pressed="true">NL</button>
+      <button id="lang-en" aria-pressed="false">EN</button>
+    </div>
+    <button class="btn" id="save"><span>PNG</span></button>
+    <button class="btn" id="stop" disabled>■ <span id="ui-stop">Stop</span></button>
+    <button class="btn primary" id="run">▶ <span id="ui-run">Teken</span></button>
+  </header>
+
+  <main class="split">
+    <section class="pane">
+      <div class="pane-head">
+        <span id="ui-program">Programma</span>
+        <span><kbd>Ctrl</kbd> <kbd>↵</kbd></span>
+      </div>
+      <div class="code">
+        <div class="gutter"><div class="gutter-inner" id="gutter"></div></div>
+        <div class="code-body">
+          <pre class="hl"><code id="hl"></code></pre>
+          <textarea class="ta" id="ta" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Programma"></textarea>
+        </div>
+      </div>
+      <div class="console" id="console"></div>
+      <div class="chips" id="chips"></div>
+    </section>
+
+    <section class="pane paper-pane">
+      <div class="pane-head">
+        <span id="ui-sheet">Vel</span>
+        <span id="ui-penlabel">Pennen</span>
+      </div>
+      <div class="pens" id="pens"></div>
+      <div class="sheet">
+        <div class="sheet-inner" id="sheet">
+          <canvas id="ink" width="1200" height="900"></canvas>
+          <canvas id="turtle" width="1200" height="900"></canvas>
+        </div>
+      </div>
+      <div class="status">
+        <div class="grp"><span id="readout">x 0 · y 0 · 0°</span></div>
+        <div class="grp">
+          <label for="speed" id="ui-speed">tempo</label>
+          <input type="range" id="speed" min="1" max="5" value="3">
+        </div>
+        <button class="toggle" id="gridtoggle" aria-pressed="true">raster</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+/* =========================================================================
+   SCHILDPAD — a Logo-family turtle graphics environment
+   Dutch and English command sets are both always active.
+   ========================================================================= */
+
+/* ===================== INTERPRETER START ===================== */
+
+const NUM='num', WORD='word', VAR='var', QUOTE='quote', OP='op';
+
+function tokenize(src){
+  const out=[]; let i=0, line=1;
+  const isWord = c=>/[A-Za-z0-9_?.]/.test(c);
+  while(i<src.length){
+    const c=src[i];
+    if(c==='\n'){ line++; i++; continue; }
+    if(/\s/.test(c)){ i++; continue; }
+    if(c===';'){ while(i<src.length && src[i]!=='\n') i++; continue; }
+    if('[]()'.includes(c)){ out.push({t:c,v:c,line}); i++; continue; }
+    if(c==='"'){
+      let j=i+1,s=''; while(j<src.length && !/[\s\[\]()]/.test(src[j])){ s+=src[j]; j++; }
+      out.push({t:QUOTE,v:s,line}); i=j; continue;
+    }
+    if(c===':'){
+      let j=i+1,s=''; while(j<src.length && isWord(src[j])){ s+=src[j]; j++; }
+      out.push({t:VAR,v:s.toLowerCase(),line}); i=j; continue;
+    }
+    const two=src.substr(i,2);
+    if(two==='<='||two==='>='||two==='<>'){ out.push({t:OP,v:two,line}); i+=2; continue; }
+    if('+-*/=<>'.includes(c)){ out.push({t:OP,v:c,line}); i++; continue; }
+    if(/[0-9]/.test(c)){
+      let j=i,s=''; while(j<src.length && /[0-9.]/.test(src[j])){ s+=src[j]; j++; }
+      out.push({t:NUM,v:parseFloat(s),line}); i=j; continue;
+    }
+    if(isWord(c)){
+      let j=i,s=''; while(j<src.length && isWord(src[j])){ s+=src[j]; j++; }
+      out.push({t:WORD,v:s.toLowerCase(),line}); i=j; continue;
+    }
+    throw new LogoError('char', line, {c});
+  }
+  return out;
+}
+
+/* --- command names: every alias maps to one canonical primitive --- */
+const ALIAS = {
+  vooruit:'forward', voor:'forward', vo:'forward', fd:'forward', forward:'forward',
+  achteruit:'back', terug:'back', ac:'back', bk:'back', back:'back',
+  rechts:'right', re:'right', rt:'right', right:'right',
+  links:'left', li:'left', lt:'left', left:'left',
+  penop:'penup', po:'penup', pu:'penup', penup:'penup',
+  penneer:'pendown', pn:'pendown', pd:'pendown', pendown:'pendown',
+  penkleur:'setcolor', pk:'setcolor', kleur:'setcolor', setcolor:'setcolor',
+    setpencolor:'setcolor', pc:'setcolor',
+  pendikte:'setwidth', dikte:'setwidth', setwidth:'setwidth', setpensize:'setwidth',
+  wisscherm:'clearscreen', ws:'clearscreen', cs:'clearscreen', clearscreen:'clearscreen',
+  wis:'clean', clean:'clean',
+  thuis:'home', home:'home',
+  zetxy:'setxy', setxy:'setxy', setpos:'setxy',
+  zetkoers:'setheading', koers:'setheading', setheading:'setheading', seth:'setheading',
+  verberg:'hideturtle', ht:'hideturtle', hideturtle:'hideturtle',
+  toon:'showturtle', st:'showturtle', showturtle:'showturtle',
+  herhaal:'repeat', repeat:'repeat',
+  teller:'repcount', repcount:'repcount',
+  als:'if', if:'if',
+  alsanders:'ifelse', ifelse:'ifelse',
+  zolang:'while', while:'while',
+  stop:'stop',
+  geefterug:'output', output:'output', op:'output',
+  maak:'make', make:'make',
+  schrijf:'print', druk:'print', print:'print', pr:'print',
+  wacht:'wait', wait:'wait',
+  toeval:'random', random:'random',
+  wortel:'sqrt', sqrt:'sqrt',
+  rond:'round', round:'round',
+  abs:'abs',
+  sin:'sin', cos:'cos',
+  rest:'remainder', remainder:'remainder', mod:'remainder',
+  xpos:'xpos', xpositie:'xpos',
+  ypos:'ypos', ypositie:'ypos',
+  richting:'heading', heading:'heading',
+};
+const TO_WORDS  = new Set(['naar','to','leer']);
+const END_WORDS = new Set(['einde','end','klaar']);
+
+const COLORS = {
+  zwart:'#1B2430', black:'#1B2430', ink:'#1B2430',
+  groen:'#33A06B', green:'#33A06B',
+  rood:'#E05252', red:'#E05252',
+  blauw:'#38A8C9', blue:'#38A8C9', cyaan:'#38A8C9', cyan:'#38A8C9',
+  geel:'#E9A93C', yellow:'#E9A93C', oranje:'#E9A93C', amber:'#E9A93C',
+  roze:'#D9527E', pink:'#D9527E', magenta:'#D9527E',
+  paars:'#8B6FD1', purple:'#8B6FD1', violet:'#8B6FD1',
+  wit:'#FCFBF7', white:'#FCFBF7',
+};
+const PEN_ORDER = ['zwart','groen','blauw','geel','roze','paars'];
+const PEN_EN = {zwart:'black', groen:'green', blauw:'blue', geel:'yellow', roze:'pink', paars:'purple'};
+
+class LogoError extends Error{
+  constructor(key, line, data){ super(key); this.key=key; this.line=line; this.data=data||{}; }
+}
+class StopSignal { }
+class OutputSignal { constructor(v){ this.value=v; } }
+
+/* argument counts for primitives that are *commands* or *reporters* */
+const ARITY = {
+  forward:1, back:1, right:1, left:1,
+  penup:0, pendown:0, setcolor:1, setwidth:1,
+  clearscreen:0, clean:0, home:0, setxy:2, setheading:1,
+  hideturtle:0, showturtle:0,
+  repeat:2, repcount:0, if:2, ifelse:3, while:2,
+  stop:0, output:1, make:2, print:1, wait:1,
+  random:1, sqrt:1, round:1, abs:1, sin:1, cos:1, remainder:2,
+  xpos:0, ypos:0, heading:0,
+};
+const REPORTERS = new Set(['repcount','random','sqrt','round','abs','sin','cos','remainder','xpos','ypos','heading']);
+
+function makeReader(toks){ return {toks, i:0}; }
+const peek = r => r.toks[r.i];
+const next = r => r.toks[r.i++];
+const lineOf = r => (r.toks[r.i] || r.toks[r.toks.length-1] || {line:1}).line;
+
+/* Pull `to name :a :b ... end` blocks out of the stream up front. */
+function extractProcedures(toks){
+  const procs = new Map();
+  const main = [];
+  for(let i=0;i<toks.length;i++){
+    const t = toks[i];
+    if(t.t===WORD && TO_WORDS.has(t.v)){
+      const nameTok = toks[++i];
+      if(!nameTok || nameTok.t!==WORD) throw new LogoError('procname', t.line);
+      const params=[];
+      while(toks[i+1] && toks[i+1].t===VAR) params.push(toks[++i].v);
+      const body=[];
+      let closed=false;
+      while(++i < toks.length){
+        const b=toks[i];
+        if(b.t===WORD && END_WORDS.has(b.v)){ closed=true; break; }
+        if(b.t===WORD && TO_WORDS.has(b.v)) throw new LogoError('nestedto', b.line);
+        body.push(b);
+      }
+      if(!closed) throw new LogoError('noend', t.line, {name:nameTok.v});
+      procs.set(nameTok.v, {name:nameTok.v, params, body});
+    } else {
+      main.push(t);
+    }
+  }
+  return {procs, main};
+}
+
+function createInterpreter(turtle, host){
+  let procs = new Map();
+  const globals = new Map();
+  let scopes = [];
+  let repcounts = [];
+
+  const resolve = name => ALIAS[name] || null;
+
+  function lookup(name){
+    for(let i=scopes.length-1;i>=0;i--) if(scopes[i].has(name)) return scopes[i].get(name);
+    if(globals.has(name)) return globals.get(name);
+    return undefined;
+  }
+  function assign(name, val){
+    for(let i=scopes.length-1;i>=0;i--) if(scopes[i].has(name)){ scopes[i].set(name,val); return; }
+    globals.set(name,val);
+  }
+
+  const num = (v, line) => {
+    const n = typeof v==='number' ? v : parseFloat(v);
+    if(typeof v!=='number' && (v===null || v===undefined || isNaN(n))) throw new LogoError('notnum', line, {v:String(v)});
+    if(isNaN(n)) throw new LogoError('notnum', line, {v:String(v)});
+    return n;
+  };
+  const truthy = v => v===true || v==='true' || v==='waar' || (typeof v==='number' && v!==0);
+
+  /* ---- expressions ---- */
+  const PREC = {'=':1,'<>':1,'<':1,'>':1,'<=':1,'>=':1,'+':2,'-':2,'*':3,'/':3};
+
+  function* evalExpr(r, minPrec=0){
+    let left = yield* evalOperand(r);
+    while(true){
+      const t = peek(r);
+      if(!t || t.t!==OP) break;
+      const p = PREC[t.v];
+      if(!p || p<minPrec) break;
+      next(r);
+      const right = yield* evalExpr(r, p+1);
+      left = binop(t.v, left, right, t.line);
+    }
+    return left;
+  }
+
+  function binop(op, a, b, line){
+    if(op==='='){ return String(a)===String(b); }
+    if(op==='<>'){ return String(a)!==String(b); }
+    const x=num(a,line), y=num(b,line);
+    switch(op){
+      case '+': return x+y;
+      case '-': return x-y;
+      case '*': return x*y;
+      case '/': if(y===0) throw new LogoError('divzero', line); return x/y;
+      case '<': return x<y;
+      case '>': return x>y;
+      case '<=': return x<=y;
+      case '>=': return x>=y;
+    }
+  }
+
+  function collectList(r){
+    const open = next(r);            // consumes '['
+    const out=[]; let depth=1;
+    while(r.i < r.toks.length){
+      const t = next(r);
+      if(t.t==='['){ depth++; }
+      if(t.t===']'){ depth--; if(depth===0) return {list:out}; }
+      out.push(t);
+    }
+    throw new LogoError('nobracket', open.line);
+  }
+
+  function* evalOperand(r){
+    const t = peek(r);
+    if(!t) throw new LogoError('needarg', lineOf(r));
+    if(t.t===NUM){ next(r); return t.v; }
+    if(t.t===QUOTE){ next(r); return t.v; }
+    if(t.t===VAR){
+      next(r);
+      const v = lookup(t.v);
+      if(v===undefined) throw new LogoError('novar', t.line, {name:t.v});
+      return v;
+    }
+    if(t.t==='['){ return collectList(r); }
+    if(t.t==='('){
+      next(r);
+      const v = yield* evalExpr(r);
+      const close = next(r);
+      if(!close || close.t!==')') throw new LogoError('noparen', t.line);
+      return v;
+    }
+    if(t.t===OP && t.v==='-'){ next(r); const v = yield* evalOperand(r); return -num(v,t.line); }
+    if(t.t===WORD){ return yield* apply(r, true); }
+    throw new LogoError('unexpected', t.line, {v:String(t.v)});
+  }
+
+  /* ---- calling ---- */
+  function* apply(r, wantValue){
+    const t = next(r);
+    const name = t.v;
+    const canon = resolve(name);
+
+    if(canon){
+      if(wantValue && !REPORTERS.has(canon)) throw new LogoError('novalue', t.line, {name});
+      const n = ARITY[canon];
+      const args=[];
+      for(let k=0;k<n;k++){
+        if(!peek(r)) throw new LogoError('needargs', t.line, {name, n});
+        args.push(yield* evalExpr(r));
+      }
+      return yield* primitive(canon, args, t.line);
+    }
+
+    if(procs.has(name)){
+      const proc = procs.get(name);
+      const args=[];
+      for(let k=0;k<proc.params.length;k++){
+        if(!peek(r)) throw new LogoError('needargs', t.line, {name, n:proc.params.length});
+        args.push(yield* evalExpr(r));
+      }
+      if(scopes.length>240) throw new LogoError('toodeep', t.line, {name});
+      const frame = new Map();
+      proc.params.forEach((p,idx)=> frame.set(p, args[idx]));
+      scopes.push(frame);
+      try{
+        yield* runTokens(proc.body);
+        if(wantValue) throw new LogoError('noreturn', t.line, {name});
+        return undefined;
+      }catch(e){
+        if(e instanceof StopSignal){
+          if(wantValue) throw new LogoError('noreturn', t.line, {name});
+          return undefined;
+        }
+        if(e instanceof OutputSignal) return e.value;
+        throw e;
+      }finally{
+        scopes.pop();
+      }
+    }
+
+    throw new LogoError('unknown', t.line, {name});
+  }
+
+  /* ---- primitives ---- */
+  function* primitive(name, a, line){
+    switch(name){
+      case 'forward':  yield* turtle.move( num(a[0],line)); return;
+      case 'back':     yield* turtle.move(-num(a[0],line)); return;
+      case 'right':    turtle.turn( num(a[0],line)); yield 'draw'; return;
+      case 'left':     turtle.turn(-num(a[0],line)); yield 'draw'; return;
+      case 'penup':    turtle.pen=false; return;
+      case 'pendown':  turtle.pen=true; return;
+      case 'setcolor': turtle.setColor(a[0], line); return;
+      case 'setwidth': turtle.width = Math.max(0.5, num(a[0],line)); return;
+      case 'clearscreen': turtle.clear(); turtle.reset(); yield 'draw'; return;
+      case 'clean':    turtle.clear(); yield 'draw'; return;
+      case 'home':     turtle.home(); yield 'draw'; return;
+      case 'setxy':    yield* turtle.goTo(num(a[0],line), num(a[1],line)); return;
+      case 'setheading': turtle.heading = ((num(a[0],line)%360)+360)%360; yield 'draw'; return;
+      case 'hideturtle': turtle.visible=false; yield 'draw'; return;
+      case 'showturtle': turtle.visible=true; yield 'draw'; return;
+
+      case 'repeat': {
+        const n = Math.floor(num(a[0],line));
+        const body = asList(a[1], line);
+        for(let k=1;k<=n;k++){
+          repcounts.push(k);
+          try{ yield* runTokens(body); }
+          finally{ repcounts.pop(); }
+          yield 'tick';
+        }
+        return;
+      }
+      case 'repcount': return repcounts.length ? repcounts[repcounts.length-1] : 0;
+      case 'while': {
+        const cond = asList(a[0], line);
+        const body = asList(a[1], line);
+        let guard=0;
+        while(true){
+          const rr = makeReader(cond);
+          const v = yield* evalExpr(rr);
+          if(!truthy(v)) break;
+          yield* runTokens(body);
+          yield 'tick';
+          if(++guard>200000) throw new LogoError('runaway', line);
+        }
+        return;
+      }
+      case 'if':     if(truthy(a[0])) yield* runTokens(asList(a[1],line)); return;
+      case 'ifelse': yield* runTokens(asList(truthy(a[0]) ? a[1] : a[2], line)); return;
+      case 'stop':   throw new StopSignal();
+      case 'output': throw new OutputSignal(a[0]);
+      case 'make':   assign(String(a[0]).toLowerCase(), a[1]); return;
+      case 'print':  host.print(fmt(a[0])); return;
+      case 'wait':   yield {wait: Math.max(0, num(a[0],line))}; return;
+
+      case 'random':    return Math.floor(Math.random()*num(a[0],line));
+      case 'sqrt':      return Math.sqrt(num(a[0],line));
+      case 'round':     return Math.round(num(a[0],line));
+      case 'abs':       return Math.abs(num(a[0],line));
+      case 'sin':       return Math.sin(num(a[0],line)*Math.PI/180);
+      case 'cos':       return Math.cos(num(a[0],line)*Math.PI/180);
+      case 'remainder': return num(a[0],line) % num(a[1],line);
+      case 'xpos':      return Math.round(turtle.x*10)/10;
+      case 'ypos':      return Math.round(turtle.y*10)/10;
+      case 'heading':   return Math.round(turtle.heading*10)/10;
+    }
+  }
+
+  function asList(v, line){
+    if(v && Array.isArray(v.list)) return v.list;
+    throw new LogoError('needlist', line);
+  }
+  function fmt(v){
+    if(v && Array.isArray(v.list)) return '[' + v.list.map(t=>t.v).join(' ') + ']';
+    if(v===true) return 'waar'; if(v===false) return 'onwaar';
+    if(typeof v==='number') return String(Math.round(v*1000)/1000);
+    return String(v);
+  }
+
+  function* runTokens(toks){
+    const r = makeReader(toks);
+    while(peek(r)){
+      const t = peek(r);
+      if(t.t===']'||t.t===')'){ next(r); continue; }
+      if(t.t!==WORD) throw new LogoError('expectcmd', t.line, {v:String(t.v)});
+      host.mark(t.line);
+      yield* apply(r, false);
+    }
+  }
+
+  return {
+    *run(src){
+      const {procs:p, main} = extractProcedures(tokenize(src));
+      procs = p; scopes = []; repcounts = [];
+      try{
+        yield* runTokens(main);
+      }catch(e){
+        if(e instanceof StopSignal || e instanceof OutputSignal) return;
+        throw e;
+      }
+    },
+    knownWords(){ return [...new Set([...Object.keys(ALIAS), ...procs.keys()])]; }
+  };
+}
+/* ====================== INTERPRETER END ====================== */
+
+
+/* ============================ TURTLE ========================= */
+const inkCv = document.getElementById('ink');
+const tuCv  = document.getElementById('turtle');
+const ink   = inkCv.getContext('2d');
+const tu    = tuCv.getContext('2d');
+const W = inkCv.width, H = inkCv.height;
+
+let showGrid = true;
+
+function drawGrid(){
+  ink.save();
+  ink.clearRect(0,0,W,H);
+  if(showGrid){
+    ink.strokeStyle = getCSS('--grid'); ink.lineWidth = 1;
+    ink.beginPath();
+    for(let x=W/2; x<W; x+=50){ ink.moveTo(x+.5,0); ink.lineTo(x+.5,H); }
+    for(let x=W/2-50; x>0; x-=50){ ink.moveTo(x+.5,0); ink.lineTo(x+.5,H); }
+    for(let y=H/2; y<H; y+=50){ ink.moveTo(0,y+.5); ink.lineTo(W,y+.5); }
+    for(let y=H/2-50; y>0; y-=50){ ink.moveTo(0,y+.5); ink.lineTo(W,y+.5); }
+    ink.stroke();
+    ink.strokeStyle = '#BFCBC4'; ink.beginPath();
+    ink.moveTo(W/2-14,H/2+.5); ink.lineTo(W/2+14,H/2+.5);
+    ink.moveTo(W/2+.5,H/2-14); ink.lineTo(W/2+.5,H/2+14);
+    ink.stroke();
+  }
+  ink.restore();
+}
+function getCSS(name){
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+const turtle = {
+  x:0, y:0, heading:0, pen:true, visible:true,
+  color:'#1B2430', width:3,
+  stepLen: 16,               // px per animation frame; Infinity = instant
+
+  reset(){ this.x=0; this.y=0; this.heading=0; this.pen=true; this.visible=true;
+           this.color='#1B2430'; this.width=3; host.pen(this.color); },
+  clear(){ drawGrid(); },
+  home(){ this.x=0; this.y=0; this.heading=0; },
+  turn(d){ this.heading = ((this.heading + d) % 360 + 360) % 360; },
+  setColor(v, line){
+    let c = null;
+    if(typeof v==='string'){
+      const k = v.toLowerCase();
+      if(COLORS[k]) c = COLORS[k];
+      else if(/^#[0-9a-f]{3,8}$/i.test(v)) c = v;
+    }
+    if(typeof v==='number'){ c = COLORS[PEN_ORDER[Math.abs(Math.floor(v)) % PEN_ORDER.length]]; }
+    if(!c) throw new LogoError('nocolor', line, {v:String(v)});
+    this.color = c; host.pen(c);
+  },
+  px(){ return W/2 + this.x; },
+  py(){ return H/2 - this.y; },
+  stroke(x0,y0,x1,y1){
+    ink.save();
+    ink.strokeStyle=this.color; ink.lineWidth=this.width;
+    ink.lineCap='round'; ink.lineJoin='round';
+    ink.beginPath(); ink.moveTo(W/2+x0, H/2-y0); ink.lineTo(W/2+x1, H/2-y1); ink.stroke();
+    ink.restore();
+  },
+  *move(dist){
+    const rad = this.heading*Math.PI/180;
+    const dx = Math.sin(rad), dy = Math.cos(rad);
+    const total = Math.abs(dist), sign = Math.sign(dist);
+    if(total === 0) return;
+    const step = this.stepLen;
+    if(!isFinite(step)){
+      const x1 = this.x + dx*dist, y1 = this.y + dy*dist;
+      if(this.pen) this.stroke(this.x,this.y,x1,y1);
+      this.x=x1; this.y=y1;
+      yield 'tick';
+      return;
+    }
+    let done = 0;
+    while(done < total){
+      const seg = Math.min(step, total-done);
+      const x1 = this.x + dx*seg*sign, y1 = this.y + dy*seg*sign;
+      if(this.pen) this.stroke(this.x,this.y,x1,y1);
+      this.x=x1; this.y=y1; done += seg;
+      yield 'draw';
+    }
+  },
+  *goTo(x,y){
+    if(this.pen) this.stroke(this.x,this.y,x,y);
+    this.x=x; this.y=y;
+    yield 'draw';
+  },
+  render(){
+    tu.clearRect(0,0,W,H);
+    if(!this.visible) return;
+    const s = 1;
+    tu.save();
+    tu.translate(this.px(), this.py());
+    tu.rotate(this.heading*Math.PI/180);
+    tu.scale(s,s);
+
+    const body = this.color==='#FCFBF7' ? '#33A06B' : this.color;
+    tu.fillStyle = body; tu.strokeStyle = 'rgba(255,255,255,.85)'; tu.lineWidth = 2;
+
+    // flippers
+    tu.beginPath();
+    [[-13,-9,-1],[13,-9,1],[-12,9,-1],[12,9,1]].forEach(([fx,fy])=>{
+      tu.moveTo(fx,fy); tu.arc(fx,fy,6.2,0,Math.PI*2);
+    });
+    tu.fill();
+    // head
+    tu.beginPath(); tu.arc(0,-17,5.6,0,Math.PI*2); tu.fill();
+    // shell
+    tu.beginPath(); tu.ellipse(0,0,12.5,15.5,0,0,Math.PI*2); tu.fill(); tu.stroke();
+    // shell plates
+    tu.globalAlpha=.55;
+    tu.beginPath();
+    tu.moveTo(0,-15.5); tu.lineTo(0,15.5);
+    tu.moveTo(-11.4,-5); tu.lineTo(11.4,-5);
+    tu.moveTo(-11.4,5.5); tu.lineTo(11.4,5.5);
+    tu.stroke();
+    tu.globalAlpha=1;
+    // nose direction pip
+    tu.fillStyle='rgba(255,255,255,.9)';
+    tu.beginPath(); tu.arc(0,-21.5,1.8,0,Math.PI*2); tu.fill();
+    tu.restore();
+  }
+};
+
+/* ============================ UI ============================= */
+const $ = id => document.getElementById(id);
+const ta = $('ta'), hl = $('hl'), gutter = $('gutter'), consoleEl = $('console');
+
+const T = {
+  nl:{
+    title:'Schildpad', sub:'turtle graphics', run:'Teken', stop:'Stop',
+    program:'Programma', sheet:'Vel', pens:'Pennen', speed:'tempo', grid:'raster',
+    ready:'Klaar. Schrijf een programma en druk op Teken.',
+    running:'Bezig met tekenen…', done:'Klaar.', stopped:'Gestopt.',
+    err:{
+      char:d=>`Ik snap het teken ${d.c} niet.`,
+      procname:()=>`Na "naar" hoort de naam van je opdracht te staan.`,
+      nestedto:()=>`Je kunt geen opdracht in een opdracht maken. Sluit de vorige eerst af met "einde".`,
+      noend:d=>`De opdracht "${d.name}" heeft geen "einde".`,
+      unknown:d=>`Ik weet niet hoe ik "${d.name}" moet doen.`,
+      novar:d=>`De variabele :${d.name} bestaat nog niet. Maak hem eerst met: maak "${d.name} 10`,
+      needarg:()=>`Hier mist nog een getal of woord.`,
+      needargs:d=>`"${d.name}" heeft ${d.n} getal(len) nodig.`,
+      needlist:()=>`Hier horen blokhaken omheen, zoals [ vooruit 100 ].`,
+      nobracket:()=>`Je bent een ] vergeten.`,
+      noparen:()=>`Je bent een ) vergeten.`,
+      notnum:d=>`"${d.v}" is geen getal.`,
+      divzero:()=>`Delen door nul kan niet.`,
+      novalue:d=>`"${d.name}" geeft geen antwoord terug, dus je kunt er niet mee rekenen.`,
+      noreturn:d=>`"${d.name}" geeft niets terug. Gebruik "geefterug" in de opdracht.`,
+      unexpected:d=>`Ik verwachtte hier geen "${d.v}".`,
+      expectcmd:d=>`"${d.v}" is geen opdracht.`,
+      toodeep:d=>`"${d.name}" roept zichzelf te vaak aan. Vergeet je een stopregel?`,
+      runaway:()=>`Deze lus stopt nooit.`,
+      nocolor:d=>`"${d.v}" ken ik niet als kleur. Probeer groen, rood, blauw, geel, roze, paars of zwart.`,
+    },
+    line:'regel',
+  },
+  en:{
+    title:'Schildpad', sub:'turtle graphics', run:'Draw', stop:'Stop',
+    program:'Program', sheet:'Sheet', pens:'Pens', speed:'speed', grid:'grid',
+    ready:'Ready. Write a program and press Draw.',
+    running:'Drawing…', done:'Done.', stopped:'Stopped.',
+    err:{
+      char:d=>`I don't understand the character ${d.c}.`,
+      procname:()=>`"to" should be followed by the name of your command.`,
+      nestedto:()=>`You can't define a command inside a command. Close the previous one with "end".`,
+      noend:d=>`The command "${d.name}" has no "end".`,
+      unknown:d=>`I don't know how to "${d.name}".`,
+      novar:d=>`The variable :${d.name} doesn't exist yet. Create it with: make "${d.name} 10`,
+      needarg:()=>`Something is missing here — a number or a word.`,
+      needargs:d=>`"${d.name}" needs ${d.n} value(s).`,
+      needlist:()=>`This needs square brackets around it, like [ forward 100 ].`,
+      nobracket:()=>`You're missing a ].`,
+      noparen:()=>`You're missing a ).`,
+      notnum:d=>`"${d.v}" is not a number.`,
+      divzero:()=>`You can't divide by zero.`,
+      novalue:d=>`"${d.name}" doesn't report a value, so you can't calculate with it.`,
+      noreturn:d=>`"${d.name}" doesn't report anything. Use "output" inside it.`,
+      unexpected:d=>`I didn't expect "${d.v}" here.`,
+      expectcmd:d=>`"${d.v}" is not a command.`,
+      toodeep:d=>`"${d.name}" calls itself too many times. Missing a stopping rule?`,
+      runaway:()=>`This loop never ends.`,
+      nocolor:d=>`I don't know the colour "${d.v}". Try green, red, blue, yellow, pink, purple or black.`,
+    },
+    line:'line',
+  }
+};
+let lang = 'nl';
+
+const EXAMPLES = {
+  nl:[
+    ['Vierkant',
+`wisscherm
+herhaal 4 [
+  vooruit 150
+  rechts 90
+]`],
+    ['Ster',
+`naar ster :zijde
+  herhaal 5 [ vooruit :zijde  rechts 144 ]
+einde
+
+wisscherm
+penkleur "roze
+pendikte 4
+ster 260`],
+    ['Bloem van vierkanten',
+`wisscherm
+penkleur "blauw
+herhaal 36 [
+  herhaal 4 [ vooruit 120  rechts 90 ]
+  rechts 10
+]`],
+    ['Spiraal met de teller',
+`wisscherm
+penkleur "paars
+herhaal 140 [
+  vooruit teller * 1.5
+  rechts 91
+]`],
+    ['Boom (roept zichzelf aan)',
+`naar tak :lengte
+  als :lengte < 9 [ stop ]
+  pendikte :lengte / 14
+  vooruit :lengte
+  rechts 27
+  tak :lengte * 0.72
+  links 54
+  tak :lengte * 0.72
+  rechts 27
+  penop  achteruit :lengte  penneer
+einde
+
+wisscherm
+verberg
+penop  zetxy 0 -320  penneer
+zetkoers 0
+penkleur "groen
+tak 150`],
+    ['Sneeuwvlok',
+`naar zijde :lengte :diepte
+  alsanders :diepte < 1 [
+    vooruit :lengte
+  ][
+    zijde :lengte / 3 :diepte - 1
+    links 60
+    zijde :lengte / 3 :diepte - 1
+    rechts 120
+    zijde :lengte / 3 :diepte - 1
+    links 60
+    zijde :lengte / 3 :diepte - 1
+  ]
+einde
+
+wisscherm
+verberg
+penop  zetxy -270 120  zetkoers 90  penneer
+penkleur "blauw
+herhaal 3 [ zijde 540 4  rechts 120 ]`],
+  ],
+  en:[
+    ['Square',
+`clearscreen
+repeat 4 [
+  forward 150
+  right 90
+]`],
+    ['Star',
+`to star :side
+  repeat 5 [ forward :side  right 144 ]
+end
+
+clearscreen
+setcolor "pink
+setwidth 4
+star 260`],
+    ['Flower of squares',
+`clearscreen
+setcolor "blue
+repeat 36 [
+  repeat 4 [ forward 120  right 90 ]
+  right 10
+]`],
+    ['Spiral using repcount',
+`clearscreen
+setcolor "purple
+repeat 140 [
+  forward repcount * 1.5
+  right 91
+]`],
+    ['Tree (calls itself)',
+`to branch :len
+  if :len < 9 [ stop ]
+  setwidth :len / 14
+  forward :len
+  right 27
+  branch :len * 0.72
+  left 54
+  branch :len * 0.72
+  right 27
+  penup  back :len  pendown
+end
+
+clearscreen
+hideturtle
+penup  setxy 0 -320  pendown
+setheading 0
+setcolor "green
+branch 150`],
+    ['Snowflake',
+`to side :len :depth
+  ifelse :depth < 1 [
+    forward :len
+  ][
+    side :len / 3 :depth - 1
+    left 60
+    side :len / 3 :depth - 1
+    right 120
+    side :len / 3 :depth - 1
+    left 60
+    side :len / 3 :depth - 1
+  ]
+end
+
+clearscreen
+hideturtle
+penup  setxy -270 120  setheading 90  pendown
+setcolor "blue
+repeat 3 [ side 540 4  right 120 ]`],
+  ]
+};
+
+const CHIPS = {
+  nl:[
+    ['vooruit 100','ga vooruit'],['achteruit 50','ga terug'],
+    ['rechts 90','draai rechts'],['links 90','draai links'],
+    ['herhaal 4 [  ]','doe iets vaker'],
+    ['naar naam\n  \neinde','eigen opdracht'],
+    ['penop','pen omhoog'],['penneer','pen omlaag'],
+    ['penkleur "groen','kleur'],['pendikte 3','dikte'],
+    ['wisscherm','leeg vel'],['thuis','terug naar het midden'],
+    ['zetxy 0 0','ga naar plek'],['zetkoers 0','draai naar noord'],
+    ['verberg','schildpad weg'],['toon','schildpad terug'],
+    ['maak "hoek 90','maak variabele'],[':hoek','gebruik variabele'],
+    ['teller','hoeveelste ronde'],['toeval 100','willekeurig getal'],
+    ['als :n < 5 [ stop ]','voorwaarde'],['wacht 20','even wachten'],
+  ],
+  en:[
+    ['forward 100','move ahead'],['back 50','move back'],
+    ['right 90','turn right'],['left 90','turn left'],
+    ['repeat 4 [  ]','do it again'],
+    ['to name\n  \nend','your own command'],
+    ['penup','lift the pen'],['pendown','lower the pen'],
+    ['setcolor "green','colour'],['setwidth 3','thickness'],
+    ['clearscreen','blank sheet'],['home','back to centre'],
+    ['setxy 0 0','jump to a spot'],['setheading 0','face north'],
+    ['hideturtle','hide it'],['showturtle','show it'],
+    ['make "angle 90','make a variable'],[':angle','use a variable'],
+    ['repcount','which round'],['random 100','random number'],
+    ['if :n < 5 [ stop ]','condition'],['wait 20','pause'],
+  ]
+};
+
+/* ---------- host callbacks ---------- */
+let currentLine = 1, badLine = null;
+const host = {
+  print(s){ log(s,'out'); },
+  mark(line){ currentLine = line; },
+  pen(color){ paintPens(color); }
+};
+
+function log(msg, cls){
+  const d=document.createElement('div');
+  d.className = cls||'';
+  d.textContent = msg;
+  consoleEl.appendChild(d);
+  consoleEl.scrollTop = consoleEl.scrollHeight;
+}
+function clearLog(){ consoleEl.textContent=''; }
+
+/* ---------- syntax highlighting ---------- */
+const KEY_CTL = new Set(['herhaal','repeat','naar','to','einde','end','als','if','alsanders','ifelse',
+                         'zolang','while','stop','geefterug','output','maak','make','teller','repcount']);
+function escapeHtml(s){ return s.replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+function highlight(src){
+  let out='';
+  const re = /(;[^\n]*)|(\[|\])|("[^\s\[\]()]*)|(:[A-Za-z_][\w]*)|(\b\d+\.?\d*\b)|([A-Za-z_][\w?]*)|([\s\S])/g;
+  let m;
+  while((m = re.exec(src))){
+    const [all, com, brk, str, vr, nm, word, other] = m;
+    if(com)       out += `<span class="t-com">${escapeHtml(com)}</span>`;
+    else if(brk)  out += `<span class="t-brk">${brk}</span>`;
+    else if(str)  out += `<span class="t-str">${escapeHtml(str)}</span>`;
+    else if(vr)   out += `<span class="t-var">${escapeHtml(vr)}</span>`;
+    else if(nm)   out += `<span class="t-num">${nm}</span>`;
+    else if(word){
+      const w = word.toLowerCase();
+      const cls = KEY_CTL.has(w) ? 't-ctl' : (ALIAS[w] ? 't-cmd' : '');
+      out += cls ? `<span class="${cls}">${escapeHtml(word)}</span>` : escapeHtml(word);
+    }
+    else out += escapeHtml(other);
+  }
+  return out;
+}
+function renderEditor(){
+  hl.innerHTML = highlight(ta.value) + '\n';
+  const lines = ta.value.split('\n').length;
+  let g='';
+  for(let i=1;i<=lines;i++) g += (i===badLine ? `<span class="bad">${i}</span>` : i) + '\n';
+  gutter.innerHTML = g;
+  syncScroll();
+}
+function syncScroll(){
+  const x = ta.scrollLeft, y = ta.scrollTop;
+  hl.style.transform = `translate(${-x}px, ${-y}px)`;
+  gutter.style.transform = `translateY(${-y}px)`;
+}
+
+/* ---------- pens ---------- */
+function paintPens(active){
+  [...$('pens').children].forEach(el=>{
+    el.setAttribute('aria-pressed', String(el.dataset.hex.toLowerCase()===String(active).toLowerCase()));
+  });
+}
+function buildPens(){
+  const box = $('pens'); box.innerHTML='';
+  PEN_ORDER.forEach(nameNl=>{
+    const hex = COLORS[nameNl];
+    const b=document.createElement('button');
+    b.className='pen'; b.dataset.hex=hex;
+    b.style.background=hex; b.style.color=hex;
+    const label = lang==='nl' ? nameNl : PEN_EN[nameNl];
+    b.title = label;
+    b.setAttribute('aria-label', label);
+    b.onclick=()=>{
+      insertAtCursor((lang==='nl' ? `penkleur "${nameNl}` : `setcolor "${PEN_EN[nameNl]}`) + '\n');
+    };
+    box.appendChild(b);
+  });
+  paintPens(turtle.color);
+}
+
+function insertAtCursor(text){
+  const s=ta.selectionStart, e=ta.selectionEnd;
+  ta.value = ta.value.slice(0,s) + text + ta.value.slice(e);
+  ta.selectionStart = ta.selectionEnd = s + text.length;
+  ta.focus(); renderEditor(); save();
+}
+
+/* ---------- chips ---------- */
+function buildChips(){
+  const box=$('chips'); box.innerHTML='';
+  CHIPS[lang].forEach(([code,desc])=>{
+    const b=document.createElement('button');
+    b.className='chip';
+    b.innerHTML = escapeHtml(code.split('\n')[0]) + `<small>${escapeHtml(desc)}</small>`;
+    b.onclick=()=>insertAtCursor(code+'\n');
+    box.appendChild(b);
+  });
+}
+
+/* ---------- examples ---------- */
+function buildExamples(){
+  const sel=$('examples'); sel.innerHTML='';
+  const first=document.createElement('option');
+  first.textContent = lang==='nl' ? 'Voorbeelden…' : 'Examples…';
+  first.value=''; sel.appendChild(first);
+  EXAMPLES[lang].forEach(([name],i)=>{
+    const o=document.createElement('option'); o.value=String(i); o.textContent=name; sel.appendChild(o);
+  });
+  sel.onchange=()=>{
+    if(sel.value==='') return;
+    ta.value = EXAMPLES[lang][+sel.value][1];
+    badLine=null; renderEditor(); save(); sel.value='';
+    run();
+  };
+}
+
+/* ---------- scheduler ---------- */
+let gen=null, raf=null, running=false, waitUntil=0;
+const SPEEDS = [3, 8, 18, 45, Infinity];
+
+function setBusy(on){
+  running=on;
+  $('run').disabled=on;
+  $('stop').disabled=!on;
+}
+
+function run(){
+  stop(true);
+  clearLog();
+  badLine=null;
+  const interp = createInterpreter(turtle, host);
+  turtle.reset();
+  drawGrid();
+  turtle.stepLen = SPEEDS[+$('speed').value - 1];
+  try{
+    gen = interp.run(ta.value);
+  }catch(e){ return fail(e); }
+  setBusy(true);
+  log(T[lang].running,'ok');
+  waitUntil = 0;
+  raf = requestAnimationFrame(tick);
+}
+
+function tick(){
+  const now = performance.now();
+  if(now < waitUntil){ raf = requestAnimationFrame(tick); return; }
+  const budget = now + 12;
+  try{
+    while(true){
+      const r = gen.next();
+      if(r.done){ finish(); return; }
+      const v = r.value;
+      if(v && typeof v==='object' && 'wait' in v){ waitUntil = performance.now() + v.wait; break; }
+      if(v === 'draw' && isFinite(turtle.stepLen)) break;
+      if(performance.now() > budget) break;
+    }
+  }catch(e){ return fail(e); }
+  turtle.render();
+  readout();
+  raf = requestAnimationFrame(tick);
+}
+
+function finish(){
+  turtle.render(); readout(); setBusy(false);
+  log(T[lang].done,'ok');
+}
+function stop(silent){
+  if(raf) cancelAnimationFrame(raf);
+  raf=null; gen=null;
+  if(running && !silent) log(T[lang].stopped,'ok');
+  setBusy(false);
+}
+function fail(e){
+  stop(true);
+  turtle.render();
+  if(e instanceof LogoError){
+    const line = e.line || currentLine;
+    badLine = line;
+    const maker = T[lang].err[e.key];
+    const msg = maker ? maker(e.data) : e.key;
+    log(`${T[lang].line} ${line}: ${msg}`, 'err');
+  }else{
+    log(String(e && e.message || e), 'err');
+  }
+  renderEditor();
+}
+function readout(){
+  $('readout').textContent =
+    `x ${Math.round(turtle.x)} · y ${Math.round(turtle.y)} · ${Math.round(turtle.heading)}°`;
+}
+
+/* ---------- language ---------- */
+function setLang(l){
+  lang=l;
+  $('lang-nl').setAttribute('aria-pressed', String(l==='nl'));
+  $('lang-en').setAttribute('aria-pressed', String(l==='en'));
+  const t=T[l];
+  $('ui-run').textContent=t.run; $('ui-stop').textContent=t.stop;
+  $('ui-program').textContent=t.program; $('ui-sheet').textContent=t.sheet;
+  $('ui-penlabel').textContent=t.pens; $('ui-speed').textContent=t.speed;
+  $('gridtoggle').textContent=t.grid;
+  document.documentElement.lang = l;
+  buildChips(); buildExamples(); buildPens();
+}
+
+/* ---------- persistence (optional) ---------- */
+let saveTimer=null;
+function save(){
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(async ()=>{
+    try{ await window.storage.set('schildpad:program', JSON.stringify({src:ta.value, lang})); }
+    catch(_){ /* storage not available — fine */ }
+  }, 700);
+}
+async function load(){
+  try{
+    const r = await window.storage.get('schildpad:program');
+    if(r && r.value){
+      const d = JSON.parse(r.value);
+      if(d.lang) setLang(d.lang);
+      if(d.src){ ta.value = d.src; return true; }
+    }
+  }catch(_){}
+  return false;
+}
+
+/* ---------- wiring ---------- */
+ta.addEventListener('input', ()=>{ badLine=null; renderEditor(); save(); });
+ta.addEventListener('scroll', syncScroll);
+ta.addEventListener('keydown', e=>{
+  if(e.key==='Tab'){ e.preventDefault(); insertAtCursor('  '); }
+  if((e.ctrlKey||e.metaKey) && e.key==='Enter'){ e.preventDefault(); run(); }
+  if(e.key==='Escape'){ stop(); }
+});
+$('run').onclick = run;
+$('stop').onclick = ()=>stop();
+$('lang-nl').onclick = ()=>{ setLang('nl'); save(); };
+$('lang-en').onclick = ()=>{ setLang('en'); save(); };
+$('speed').oninput = ()=>{ turtle.stepLen = SPEEDS[+$('speed').value - 1]; };
+$('gridtoggle').onclick = ()=>{
+  showGrid=!showGrid;
+  $('gridtoggle').setAttribute('aria-pressed', String(showGrid));
+  if(!running){ drawGrid(); turtle.render(); }
+};
+$('save').onclick = ()=>{
+  const out=document.createElement('canvas');
+  out.width=W; out.height=H;
+  const c=out.getContext('2d');
+  c.fillStyle=getCSS('--paper'); c.fillRect(0,0,W,H);
+  c.drawImage(inkCv,0,0);
+  const a=document.createElement('a');
+  a.download='schildpad.png'; a.href=out.toDataURL('image/png'); a.click();
+};
+
+/* ---------- boot ---------- */
+(async function boot(){
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    $('speed').value = '5';
+  }
+  buildPens();
+  setLang('nl');
+  const restored = await load();
+  if(!restored) ta.value = EXAMPLES[lang][1][1];
+  turtle.stepLen = SPEEDS[+$('speed').value - 1];
+  renderEditor();
+  drawGrid();
+  turtle.reset();
+  turtle.render();
+  readout();
+  log(T[lang].ready,'ok');
+})();
+</script>

@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Schildpad",
+    "slug": "schildpad",
+    "version": "0.1.0",
+    "orientation": "default",
+    "platforms": ["android", "ios"],
+    "android": {
+      "package": "com.example.schildpad"
+    },
+    "assetBundlePatterns": ["**/*"]
+  }
+}

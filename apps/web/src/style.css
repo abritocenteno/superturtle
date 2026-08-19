@@ -1,0 +1,294 @@
+:root{
+    --slate-900:#0E1622;
+    --slate-800:#151F2E;
+    --slate-700:#1E2B3D;
+    --line:#2A3A50;
+    --text:#E6EDF5;
+    --muted:#8CA0B8;
+    --paper:#FCFBF7;
+    --grid:#DCE3DE;
+    --green:#33A06B;
+    --amber:#E9A93C;
+    --rose:#D9527E;
+    --cyan:#38A8C9;
+    --violet:#8B6FD1;
+    --red:#E05252;
+    --display:'Bricolage Grotesque','Trebuchet MS',system-ui,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+    --pad:14px;
+    --split:58%;      /* the paper's share of the split; the grip changes it */
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--slate-900);color:var(--text);
+    font-family:var(--display);font-size:15px;
+    -webkit-font-smoothing:antialiased;
+  }
+  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+  :focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:3px}
+
+  .app{height:100%;display:flex;flex-direction:column}
+
+  /* ---------- top bar ---------- */
+  .bar{
+    display:flex;align-items:center;gap:14px;
+    padding:10px var(--pad);border-bottom:1px solid var(--line);
+    background:var(--slate-800);flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:baseline;gap:9px;margin-right:auto}
+  .brand h1{
+    margin:0;font-size:20px;font-weight:800;letter-spacing:-.02em;
+  }
+  .brand .sub{color:var(--muted);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+  .btn{
+    display:inline-flex;align-items:center;gap:7px;
+    padding:7px 13px;border-radius:7px;border:1px solid var(--line);
+    background:var(--slate-700);font-size:14px;transition:.15s border-color,.15s background;
+  }
+  .btn:hover{border-color:#3B506C}
+  .btn.primary{background:var(--green);border-color:var(--green);color:#06210F;font-weight:600}
+  .btn.primary:hover{background:#3CB579;border-color:#3CB579}
+  .btn[disabled]{opacity:.4;cursor:default}
+  .lang{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+  .lang button{padding:7px 11px;font-size:13px;color:var(--muted)}
+  .lang button[aria-pressed=true]{background:var(--slate-700);color:var(--text);font-weight:600}
+
+  /* ---------- split ----------
+     Paper on top, program underneath, at every width. `--split` is the paper's
+     height; the grip between them drags it, so a child can give the drawing
+     the screen or give the editor the screen without anything switching
+     underneath them. */
+  .split{
+    flex:1;min-height:0;display:grid;
+    grid-template-columns:1fr;
+    grid-template-rows:var(--split) 11px minmax(0,1fr);
+  }
+  .pane{display:flex;flex-direction:column;min-height:0;min-width:0}
+  #code-pane{border-top:1px solid var(--line)}
+  .grip{
+    position:relative;background:var(--slate-800);
+    border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+    cursor:row-resize;touch-action:none;   /* dragging must not scroll the page */
+  }
+  .grip::after{
+    content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:46px;height:3px;border-radius:3px;background:#3B506C;
+  }
+  .grip:hover::after,.grip:focus-visible::after{background:var(--muted)}
+  body[data-dragging=y]{cursor:row-resize;user-select:none}
+  /* The same divider turned on its side, between the editor and the chips. */
+  .grip-v{
+    width:11px;flex:0 0 11px;border:0;
+    border-left:1px solid var(--line);border-right:1px solid var(--line);
+    cursor:col-resize;
+  }
+  .grip-v::after{width:3px;height:46px}
+  body[data-dragging=x]{cursor:col-resize;user-select:none}
+  .pane-head{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:9px var(--pad);color:var(--muted);
+    font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  }
+  .pane-head .grp{display:flex;align-items:center;gap:9px}
+  .pane-head kbd{
+    font-family:var(--mono);font-size:10px;background:var(--slate-700);
+    border:1px solid var(--line);border-radius:4px;padding:2px 5px;text-transform:none;letter-spacing:0;
+  }
+
+  /* ---------- editor ---------- */
+  .code{
+    flex:1;min-height:0;display:flex;position:relative;
+    overflow:hidden;contain:paint;   /* a fast drag must not paint code past the box */
+    background:var(--slate-800);border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+    font-family:var(--mono);font-size:13.5px;line-height:1.62;
+  }
+  .gutter{
+    width:44px;flex:0 0 44px;overflow:hidden;position:relative;
+    background:var(--slate-800);border-right:1px solid var(--line);
+  }
+  .gutter-inner{padding:12px 8px 60px 0;text-align:right;color:#4E6280;white-space:pre;will-change:transform}
+  .gutter-inner .bad{color:var(--red);font-weight:700}
+  .code-body{flex:1;position:relative;min-width:0}
+  .hl,.ta{
+    position:absolute;inset:0;margin:0;padding:12px 14px 60px;
+    font:inherit;line-height:inherit;white-space:pre;overflow:hidden;
+    border:0;tab-size:2;
+  }
+  .hl{pointer-events:none;color:var(--text)}
+  .hl code{display:block;will-change:transform}
+  .ta{
+    background:transparent;color:transparent;caret-color:var(--amber);
+    resize:none;overflow:auto;
+  }
+  .ta::selection{background:rgba(233,169,60,.28)}
+  .ta::-webkit-scrollbar{width:9px;height:9px}
+  .ta::-webkit-scrollbar-thumb{background:#2E4058;border-radius:9px}
+
+  .t-cmd{color:#7FD9AE}
+  .t-ctl{color:var(--amber);font-weight:700}
+  .t-num{color:#F0A6C2}
+  .t-var{color:#8FCFEA}
+  .t-str{color:#C4B3F0}
+  .t-brk{color:#8CA0B8}
+  .t-com{color:#5C7392;font-style:italic}
+
+  /* The chips sit beside the editor, not under it: stacked, they eat three rows
+     of a pane that is already sharing its height with the paper, and a short
+     split then leaves no editor at all. */
+  .code-wrap{flex:1;min-height:0;display:flex;min-width:0}
+  .code-main{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0}
+
+  /* ---------- console ---------- */
+  .console{
+    padding:9px var(--pad);min-height:44px;max-height:120px;overflow:auto;
+    font-family:var(--mono);font-size:12.5px;line-height:1.55;color:var(--muted);
+    background:var(--slate-900);
+  }
+  .console .err{color:#FF9B9B}
+  .console .out{color:#BFE9D3}
+  .console .ok{color:var(--muted)}
+
+  /* ---------- chips ---------- */
+  .chips{
+    /* Half the pane until the grip says otherwise; max-width keeps the default
+       off the editor's 360px floor on a narrow desktop window (11px = grip). */
+    flex:0 0 var(--chips,50%);width:var(--chips,50%);max-width:calc(100% - 371px);
+    align-content:flex-start;
+    display:flex;flex-wrap:wrap;gap:5px;padding:10px var(--pad) 12px;
+    overflow:auto;
+  }
+  .chip{
+    font-family:var(--mono);font-size:11.5px;padding:4px 8px;border-radius:5px;
+    background:var(--slate-800);border:1px solid var(--line);color:#9FD8BC;
+  }
+  .chip:hover{background:var(--slate-700);color:#C7F0DC}
+  .chip small{color:#63798F;margin-left:6px;font-family:var(--display)}
+
+  /* ---------- paper ---------- */
+  .paper-pane{background:var(--slate-900)}
+  .paper-col{flex:1;min-height:0;min-width:0;display:flex;flex-direction:column}
+  /* Only the sheet goes edge to edge; the labels and controls around it keep
+     their inset. */
+  .paper-col .pane-head,.paper-col .pens,.paper-col .status{padding-left:var(--pad);padding-right:var(--pad)}
+  .paper-col .status{padding-bottom:var(--pad)}
+  .pens{display:flex;gap:6px;align-items:flex-end;height:38px;padding-left:2px}
+  .pen{
+    width:15px;height:26px;position:relative;border-radius:2px 2px 4px 4px;
+    transition:transform .18s cubic-bezier(.3,1.4,.5,1),filter .18s;
+    transform:translateY(-9px);filter:saturate(.55) brightness(.72);
+  }
+  .pen::after{
+    content:'';position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);
+    border-left:3px solid transparent;border-right:3px solid transparent;
+    border-top:7px solid currentColor;opacity:.9;
+  }
+  .pen[aria-pressed=true]{transform:translateY(0);filter:none}
+  .pen[aria-pressed=true]::before{
+    content:'';position:absolute;inset:-4px -3px;border-radius:5px;
+    border:1px solid currentColor;opacity:.45;
+  }
+  /* The sheet takes the whole box it is given -- full width, whatever height the
+     split leaves. It has no aspect ratio of its own: CanvasSurface.fit() gives
+     the logical space the same shape as the box, so a wide window is more room
+     to draw in rather than a stretched drawing. */
+  .sheet{position:relative;flex:1;min-height:0;display:flex}
+  .sheet-inner{
+    position:relative;flex:1;min-width:0;background:var(--paper);
+    box-shadow:inset 0 1px 0 rgba(0,0,0,.25),0 -1px 0 rgba(255,255,255,.05);
+  }
+  .sheet-inner canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+  .status{
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+    padding-top:10px;color:var(--muted);font-size:12px;font-family:var(--mono);
+  }
+  .status .grp{display:flex;align-items:center;gap:7px}
+  .status label{letter-spacing:.04em}
+  input[type=range]{width:104px;accent-color:var(--green)}
+  .toggle{
+    padding:3px 9px;border:1px solid var(--line);border-radius:6px;
+    font-family:var(--mono);font-size:11.5px;color:var(--muted);
+  }
+  .toggle[aria-pressed=true]{background:var(--slate-700);color:var(--text)}
+  select{
+    font:inherit;font-size:13px;background:var(--slate-700);color:var(--text);
+    border:1px solid var(--line);border-radius:7px;padding:7px 9px;
+  }
+
+  /* ---------- mobile-only chrome (hidden on desktop) ---------- */
+  .keys{display:none}
+
+  /* ---------- narrow: same layout, phone-sized chrome ----------
+     Nothing moves or switches on a phone; the split is the split. What
+     changes is that the header's buttons step aside for a key row above the
+     keyboard, and everything gets bigger fingers. */
+  @media (max-width:720px){
+    /* A phone's paper is limited by width, not height, so it needs a smaller
+       share than a desktop's before it starts wasting room. */
+    :root{--split:46%}
+    .app{height:100dvh}   /* dvh, so the keyboard shrinking the viewport counts */
+
+    .bar{gap:8px;padding:8px 10px;flex-wrap:nowrap}
+    .brand{margin-right:auto;min-width:0}
+    .brand h1{font-size:17px}
+    .brand .sub{display:none}
+    #save{padding:7px 10px;font-size:12px}
+    #run,#stop{display:none}          /* replaced by the key row and #go */
+    select{flex:0 1 auto;max-width:34vw;font-size:12px;padding:7px}
+
+    .pane-head{display:none}
+    .grip{height:auto}
+
+    /* Code side: editor takes the slack, key row and chips sit above the
+       keyboard (interactive-widget=resizes-content shrinks the viewport). */
+    .code{border-top:0;font-size:15px}   /* 15px: iOS zooms into anything smaller */
+    .gutter{width:34px;flex:0 0 34px}
+    .hl,.ta{padding:10px 12px 40px}
+    /* Exactly three lines: 12px x 1.5 line-height x 3 + 6px padding either
+       side. A clipped half-line under an error message reads as breakage. */
+    .console{max-height:66px;min-height:0;padding:6px 12px;font-size:12px;line-height:1.5}
+    .keys{
+      display:flex;gap:6px;padding:6px 10px;
+      border-top:1px solid var(--line);background:var(--slate-800);
+    }
+    .key{
+      flex:1;padding:9px 0;border-radius:7px;
+      border:1px solid var(--line);background:var(--slate-700);
+      font-family:var(--mono);font-size:16px;line-height:1;
+    }
+    .key:active{background:#2A3A50}
+    /* The header's Teken/Stop pair is hidden on narrow, so this one button is
+       both: green run, amber stop. */
+    /* A word, not a symbol: next to backspace, any glyph for "wipe it all"
+       reads as backspace's cousin. Smaller type so it still fits a key. */
+    .key-clear{flex:1.5;font-size:12px;color:var(--muted)}
+    .key-run{flex:1.6;background:var(--green);border-color:var(--green);color:#06210F}
+    body[data-busy=true] .key-run{background:var(--amber);border-color:var(--amber)}
+    .grip-v{display:none}
+    /* Under the editor again, as one scrolling strip: a phone has no width to
+       spare for a second column. */
+    .code-wrap{flex-direction:column}
+    .chips{
+      flex:0 0 auto;width:auto;border-top:1px solid var(--line);
+      display:flex;flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;
+      padding:8px 10px;gap:6px;
+      scrollbar-width:none;-webkit-overflow-scrolling:touch;
+      padding-bottom:calc(8px + env(safe-area-inset-bottom));
+    }
+    .chips::-webkit-scrollbar{display:none}
+    .chip{flex:0 0 auto;font-size:13px;padding:7px 10px}
+    .chip small{display:none}
+
+    /* Sheet side. */
+    .paper-col .pens,.paper-col .status{padding-left:10px;padding-right:10px}
+    .paper-col .status{padding-bottom:8px}
+    .pens{height:36px;gap:10px;align-items:flex-end;padding-bottom:2px}
+    .pen{width:18px;height:28px}
+    .status{gap:8px;padding-top:8px;font-size:11px}
+    #readout{display:none}            /* the paper says it better than a number */
+    input[type=range]{width:84px}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    .pen{transition:none}
+  }

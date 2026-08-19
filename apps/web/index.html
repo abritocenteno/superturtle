@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <title>Schildpad — turtle graphics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="bar">
+      <div class="brand">
+        <h1 id="ui-title">Schildpad</h1>
+        <span class="sub" id="ui-sub">turtle graphics</span>
+      </div>
+      <select id="examples" aria-label="Voorbeelden"></select>
+      <div class="lang" role="group" aria-label="Taal / language">
+        <button id="lang-nl" aria-pressed="true">NL</button>
+        <button id="lang-en" aria-pressed="false">EN</button>
+      </div>
+      <button class="btn" id="save"><span>PNG</span></button>
+      <button class="btn" id="stop" disabled>■ <span id="ui-stop">Stop</span></button>
+      <button class="btn primary" id="run">▶ <span id="ui-run">Teken</span></button>
+    </header>
+
+    <main class="split" id="split-main">
+      <section class="pane paper-pane">
+        <div class="paper-col">
+          <div class="pane-head">
+            <span id="ui-sheet">Vel</span>
+            <span id="ui-penlabel">Pennen</span>
+          </div>
+          <div class="pens" id="pens"></div>
+          <div class="sheet">
+            <div class="sheet-inner" id="sheet">
+              <canvas id="grid" width="1200" height="900"></canvas>
+              <canvas id="ink" width="1200" height="900"></canvas>
+              <canvas id="turtle" width="1200" height="900"></canvas>
+            </div>
+          </div>
+          <div class="status">
+            <div class="grp"><span id="readout">x 0 &middot; y 0 &middot; 0&deg;</span></div>
+            <div class="grp">
+              <label for="speed" id="ui-speed">tempo</label>
+              <input type="range" id="speed" min="1" max="5" value="3">
+            </div>
+            <button class="toggle" id="gridtoggle" aria-pressed="true">raster</button>
+          </div>
+        </div>
+      </section>
+      <div class="grip" id="grip" role="separator" aria-orientation="horizontal"
+           tabindex="0" aria-label="Verdeel vel en programma"></div>
+      <section class="pane" id="code-pane">
+        <div class="pane-head">
+          <span id="ui-program">Programma</span>
+          <span class="grp">
+            <button class="toggle" id="clear">wissen</button>
+            <span><kbd>Ctrl</kbd> <kbd>&#8629;</kbd></span>
+          </span>
+        </div>
+        <div class="code-wrap" id="code-wrap">
+          <div class="code-main">
+            <div class="code">
+              <div class="gutter"><div class="gutter-inner" id="gutter"></div></div>
+              <div class="code-body">
+                <pre class="hl"><code id="hl"></code></pre>
+                <textarea class="ta" id="ta" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" aria-label="Programma"></textarea>
+              </div>
+            </div>
+            <div class="console" id="console"></div>
+            <div class="keys" id="keys">
+              <button class="key" data-ins="[">[</button>
+              <button class="key" data-ins="]">]</button>
+              <button class="key" data-ins=":">:</button>
+              <button class="key" data-ins="&quot;">"</button>
+              <button class="key" id="key-back" aria-label="Backspace">&#9003;</button>
+              <button class="key key-clear" id="key-clear">wissen</button>
+              <button class="key key-run" id="key-run">&#9654;</button>
+            </div>
+          </div>
+          <div class="grip grip-v" id="grip-x" role="separator" aria-orientation="vertical"
+               tabindex="0" aria-label="Verdeel programma en blokjes"></div>
+          <div class="chips" id="chips"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="./src/app.ts"></script>
+</body>
+</html>
