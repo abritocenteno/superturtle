@@ -41,6 +41,14 @@
     margin:0;font-size:20px;font-weight:800;letter-spacing:-.02em;
   }
   .brand .sub{color:var(--muted);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+
+  /* ---------- credit strip under the split ---------- */
+  .credit{
+    flex:none;padding:5px var(--pad);border-top:1px solid var(--line);
+    background:var(--slate-800);color:var(--muted);font-size:11px;text-align:right;
+  }
+  .credit a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+  .credit a:hover{color:var(--text)}
   .btn{
     display:inline-flex;align-items:center;gap:7px;
     padding:7px 13px;border-radius:7px;border:1px solid var(--line);

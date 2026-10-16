@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { View, Text, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Linking, useWindowDimensions } from 'react-native';
 import { Canvas, Path, Skia, Group } from '@shopify/react-native-skia';
 import {
   createInterpreter, Turtle, createDriver, SPEEDS, formatError,
@@ -95,6 +95,12 @@ export default function App() {
           <Text style={styles.btnText}>▶ Teken</Text>
         </Pressable>
       </View>
+      <Text style={styles.credit}>
+        Powered by{' '}
+        <Text style={styles.creditLink} onPress={() => Linking.openURL('https://prikichilabs.com')}>
+          Prikichi Labs
+        </Text>
+      </Text>
     </View>
   );
 }
@@ -129,4 +135,6 @@ const styles = StyleSheet.create({
   status: { color: '#8CA0B8', flex: 1, fontFamily: 'monospace', fontSize: 12 },
   btn: { backgroundColor: '#33A06B', paddingVertical: 10, paddingHorizontal: 18, borderRadius: 8 },
   btnText: { color: '#06210F', fontWeight: '600' },
+  credit: { color: '#8CA0B8', fontSize: 11, textAlign: 'center' },
+  creditLink: { textDecorationLine: 'underline' },
 });
